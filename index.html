@@ -67,6 +67,15 @@
             margin-top: 15px;
         }
         .btn:hover { color: var(--accent-glow); border-color: var(--accent-glow); box-shadow: 0 0 15px var(--accent-glow-dim); }
+        
+        /* Playing Audio Button Style */
+        .btn.playing {
+            background: rgba(226, 168, 185, 0.2);
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 20px rgba(226, 168, 185, 0.4);
+            color: var(--text-main);
+        }
+
         #enter-btn { margin-top: 40px; opacity: 0; transform: translateY(10px); }
 
         /* Main Content & Cards */
@@ -149,10 +158,6 @@
         <button id="heartbeat-toggle" class="heartbeat-btn">Heartbeat 🤍</button>
     </div>
 
-    <div id="audio-overlay" class="modal-overlay">
-        <div class="modal-text" id="audio-overlay-text"></div>
-    </div>
-
     <div id="breathe-overlay" class="modal-overlay">
         <div class="breathe-circle"></div>
         <div class="modal-text" id="calming-text">Hey… breathe slowly.</div>
@@ -173,6 +178,14 @@
         <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
             <button class="btn" onclick="showRandomMissingText()">Miss me more? ✨</button>
             <button class="btn" onclick="closeModal('missing-overlay')">Close</button>
+        </div>
+    </div>
+
+    <div id="trauma-overlay" class="modal-overlay">
+        <div class="modal-text" id="trauma-text"></div>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+            <button class="btn" onclick="showRandomTraumaText()">Pull me closer 🤍</button>
+            <button class="btn" onclick="closeModal('trauma-overlay')">Close</button>
         </div>
     </div>
 
@@ -222,15 +235,22 @@
         </section>
 
         <section class="card fade-up">
+            <h2>Stepping Out Of The Dark</h2>
+            <p>Trauma tries to convince you that the world is dangerous, and that you have to hide to stay safe. But you don't have to hide anymore.</p>
+            <p>Whenever your mind pulls you back into those scary places, or you feel trapped in a memory, click below. Let me pull you out.</p>
+            <button class="btn" onclick="openTraumaModal()">help me come to you bby 🤍</button>
+        </section>
+
+        <section class="card fade-up">
             <h2>When you feel unloved…</h2>
             <p>Sometimes your mind will lie to you and tell you that you are hard to love. When that happens, close your eyes and listen to my voice.</p>
-            <button class="btn" onclick="toggleVoice('audio-unloved', 'I’m right here… just listen. You are so easy to love.', this)">Play 🤍</button>
+            <button class="btn" onclick="toggleVoice('audio-unloved', this)">Play 🤍</button>
         </section>
 
         <section class="card fade-up">
             <h2>When you need me near…</h2>
             <p>For the late nights of studying when the room feels too quiet.</p>
-            <button class="btn" onclick="toggleVoice('audio-miss', 'Close your eyes, Mrs. Sujal… I’m holding your hand.', this)">Play 🤍</button>
+            <button class="btn" onclick="toggleVoice('audio-miss', this)">Play 🤍</button>
         </section>
 
         <section class="card fade-up">
@@ -414,26 +434,68 @@
             setTimeout(() => { textEl.textContent = missingLines[randomIndex]; textEl.style.opacity = 1; }, 300);
         }
 
-        // --- VOICE LOGIC ---
-        let currentAudio = null; let currentBtn = null;
-        const audioOverlay = document.getElementById("audio-overlay");
-        const audioOverlayText = document.getElementById("audio-overlay-text");
-
-        function toggleVoice(audioId, text, btnElement) {
-            const audio = document.getElementById(audioId);
-            if(currentAudio === audio && !audio.paused) { audio.pause(); resetAudioUI(); return; }
-            if(currentAudio && !currentAudio.paused) { currentAudio.pause(); currentAudio.currentTime = 0; if(currentBtn) currentBtn.innerHTML = "Play 🤍"; }
-
-            currentAudio = audio; currentBtn = btnElement;
-            audio.play().then(() => {
-                btnElement.innerHTML = "Pause 🤍"; audioOverlayText.textContent = text; audioOverlay.classList.add("active");
-            }).catch(e => { alert("Please ensure your voice note is uploaded correctly!"); });
-
-            audio.onended = () => { resetAudioUI(); };
+        // --- TRAUMA HEALING LOGIC ---
+        const traumaLines = [
+            "Take my hand. Step out of the fear just for a second. I've got you.",
+            "You are safe now. The things that hurt you in the past cannot reach you here.",
+            "I know it's scary to let your guard down, but I am not going to drop you. I promise.",
+            "Breathe out the heavy memories. Breathe in this moment. We are okay.",
+            "You don't have to fight your mind alone. Lean on me. I'll carry the weight.",
+            "Every time you feel like running away, run towards me instead. I am your safe harbor."
+        ];
+        function openTraumaModal() { showRandomTraumaText(); document.getElementById('trauma-overlay').classList.add("active"); }
+        function showRandomTraumaText() {
+            const randomIndex = Math.floor(Math.random() * traumaLines.length);
+            const textEl = document.getElementById('trauma-text');
+            textEl.style.opacity = 0;
+            setTimeout(() => { textEl.textContent = traumaLines[randomIndex]; textEl.style.opacity = 1; }, 300);
         }
 
-        function resetAudioUI() { audioOverlay.classList.remove("active"); if(currentBtn) currentBtn.innerHTML = "Play 🤍"; currentAudio = null; currentBtn = null; }
-        audioOverlay.addEventListener("click", () => { if(currentAudio && !currentAudio.paused) { currentAudio.pause(); resetAudioUI(); } });
+        // --- INLINE VOICE TOGGLE LOGIC ---
+        let currentAudio = null; 
+        let currentBtn = null;
+
+        window.toggleVoice = function(audioId, btnElement) {
+            const audio = document.getElementById(audioId);
+            
+            // If the user clicks the SAME button that is currently playing
+            if(currentAudio === audio && !audio.paused) { 
+                audio.pause(); 
+                btnElement.innerHTML = "Play 🤍"; 
+                btnElement.classList.remove('playing');
+                currentAudio = null; 
+                return; 
+            }
+            
+            // If a DIFFERENT audio is playing, pause it first
+            if(currentAudio && !currentAudio.paused) { 
+                currentAudio.pause(); 
+                currentAudio.currentTime = 0; 
+                if(currentBtn) {
+                    currentBtn.innerHTML = "Play 🤍"; 
+                    currentBtn.classList.remove('playing');
+                }
+            }
+
+            // Set the new audio as current
+            currentAudio = audio; 
+            currentBtn = btnElement;
+            
+            audio.play().then(() => {
+                btnElement.innerHTML = "Pause ⏸️"; 
+                btnElement.classList.add('playing');
+            }).catch(e => { 
+                alert("Please ensure your voice note is uploaded correctly!"); 
+            });
+
+            // When the audio finishes, reset the button back to "Play"
+            audio.onended = () => { 
+                btnElement.innerHTML = "Play 🤍"; 
+                btnElement.classList.remove('playing');
+                currentAudio = null; 
+                currentBtn = null;
+            };
+        }
 
     </script>
 </body>
